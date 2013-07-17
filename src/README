@@ -1,0 +1,16 @@
+Cachetest Applications
+
+cachetest.cc: is the actual program which performs the tests, in general do not invoke manually
+plot.sh:	A script to create plots, again no need for manual execution
+run.sh:		For now, the script which runs experiements, determines cache sizes etc.
+cache_exp.sh:	New script with lots of options. This will replace run.sh. Allows specification of many experimental parameters.
+				Creates new subdirectory structure for experiments.
+experiment.config:	Configuration file for experiments run via cache_exp.sh
+Makefile:	gmake makefile. Supported targets: all, plot, cachetest
+
+Minor Components:
+docalc.sh:	A script to compute some statistics. 
+perf_stat.py:	Auxillary script to compute cross file statistics
+
+Usage:
+	Use cache_exp.sh to perform your experiment.

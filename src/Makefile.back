@@ -1,0 +1,52 @@
+.PHONY: plot
+CXXFLAGS=-O2 -Werror -g -IPAPI/install/include
+#CXXFLAGS=-Werror -g
+LDFLAGS=
+CXX=g++
+
+####
+#If you uncomment/comment out the next line, you must RECOMPILE. Otherwise wrong values are assumed in the script
+#CXXFLAGS+=-DWRITEBACK    #Keep this as a seperate CXXFLAGS line! Script!
+####
+
+#CXXFLAGS+=-DDEBUG
+#CXXFLAGS+=-DDEBUG_RUN
+#CXXFLAGS+=-DDEBUG_ALARM
+#CXXFLAGS+=-DDEBUG_CREATE
+
+REPEATS=5
+DURATION=5
+CPUS=1
+
+all: genzipf.o cachetest cachetest.s launcher Distribution.o Buffer.o
+	make -C util
+
+Buffer.o: Buffer.cc
+	$(CXX) $(CXXFLAGS) -c -g $? -o $@
+
+launcher: launcher.cc
+	$(CXX) $(CXXFLAGS) -g $? -o $@
+
+cachetest: cachetest.cc genzipf.o Distribution.o Perf.o Buffer.o PAPI/install/lib/libpapi.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -g $^ -o $@
+
+genzipf.o: genzipf.c
+	$(CXX) $(CXXFLAGS) -c -g $? -o $@
+
+Distribution.o: Distribution.cc Distribution.h
+	$(CXX) $(CXXFLAGS) -c -g Distribution.cc -o $@
+
+Perf.o: Perf.cc Perf.h
+	$(CXX) $(CXXFLAGS) -c -g Perf.cc -o $@
+
+cachetest.s: cachetest.cc
+	$(CXX) $(CXXFLAGS) -S $^
+
+L1s.out L2s.out L3s.out: cachetest
+	./cache_exp.sh -s -t $(DURATION) -n $(REPEATS) -d $(subst s.out,,$(subst L,,$@)) -p $(CPUS) -P
+
+plot: L1s.ps L2s.ps L3s.ps sums.ps L1r.ps L2r.ps L3r.ps sumr.ps
+
+clean:
+	-rm -f Buffer.o Perf.o Distribution.o launcher genzipf.o cachetest cachetest.s L{1,2,3}{r,s}.* sum?.ps nohup.out
+	make -C util clean

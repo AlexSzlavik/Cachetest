@@ -1,0 +1,26 @@
+#Data Dump files
+SYS_DUMP_FILE="system_config.txt"
+CONFIG_DUMP_FILE="used_config.txt"
+PERF_DUMP_FILE="perf"
+PERF_PREFIX="perf_"
+ERROR_DUMP_FILE="error"
+AVG_PERF_PREFIX="avg_perf"
+BENCHMARK="../src/cachetest"
+PERF=$(which perf)
+LAUNCHER_PROGRAM="../src/launcher"
+
+#Perf Parameters
+#On Douze (AMD Opteron 10h family)
+#r0000000040 - L1 DCache Accesses
+#r0000000041 - L1 DCache Miss
+#r0000001e42 - L1 DCache refills from L2 (L2 hits)
+#r0000001f42 - L1 DCache refills from L2 and NB (L2 hits and L3 and DRAM)
+#r000000027d - L2 Cache Accesses
+#r04000037ed- L3 Cache Accesses from Core 3, which are not cancelled!
+#r04000037e1- L3 Cache Misses by Core 3
+#Synopsis: 30h selects core 3, 07h is required to only get data from 1 core
+#NOTE: Only specify one line of PERF_PARAM! Must start at beginning of line
+#PERF_PARAM="-e r0000000040,r0000001f42,r0000001e42,r04000037e1"
+#PERF_PARAM="-e r0000000040,r0000001f42,r0000001e42"
+
+PERF_PARAM="-e r1cb,r2cb,rbcb,r10cb"

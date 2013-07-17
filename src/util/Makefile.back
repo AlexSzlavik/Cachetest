@@ -1,0 +1,16 @@
+CXX=gcc
+CXXFLAGS=-Wall -g -fomit-frame-pointer -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
+
+all: phys_dumper wrmsr rdmsr
+
+.o:
+	$(CC) $(LDFLAGS) -o $@ $<
+
+.c.o:
+	$(CC) $(CFLAGS) -o $@ $<
+
+.c:
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+
+clean:
+	-rm -f phys_dumper wrmsr rdmsr
