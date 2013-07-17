@@ -12,15 +12,15 @@ Perf_Cachetest::~Perf_Cachetest() {
     for(;it!=fds.end();it++)
         close(*it);
 }
-
-bool 
-Perf_Cachetest::addEvent(__u64 rawCode) {
-    struct perf_event_attr attr;
-    memset(&attr,0x0,sizeof(attr));
-    attr.type = PERF_TYPE_RAW;
-
-    attr.config = rawCode;
-}
+//
+//bool 
+//Perf_Cachetest::addEvent(__u64 rawCode) {
+//    struct perf_event_attr attr;
+//    memset(&attr,0x0,sizeof(attr));
+//    attr.type = PERF_TYPE_RAW;
+//
+//    attr.config = rawCode;
+//}
 
 bool 
 Perf_Cachetest::addEvent(__u32 eventId, __u32 UnitMask) {

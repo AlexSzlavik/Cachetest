@@ -21,6 +21,7 @@ class Perf_PAPI : public Perf
     public:
         Perf_PAPI();
 
+        bool        addEvent( Event );
         bool        addEvent( std::string event );
 
         bool        start();

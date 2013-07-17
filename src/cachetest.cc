@@ -131,7 +131,8 @@ main( int argc, char* const argv[] ) {
 	std::vector<Result_t> results;
     if( Measured_events != NULL != 0 && !perf->stop() )
 		error("ERROR: Stopping Counters failed");
-	perf->read_results(results);
+	if( !perf->read_results(results) )
+        error("ERROR: Reading results");
 
     //Result output
     *output << (opt.dataset >> 10)

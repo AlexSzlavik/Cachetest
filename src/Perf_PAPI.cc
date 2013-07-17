@@ -18,7 +18,7 @@ Perf_PAPI::Perf_PAPI()
 bool
 Perf_PAPI::addEvent( Event event )
 {
-	return addEvent( event->string_event );
+	return addEvent( event.string_event );
 }
 
 bool
@@ -68,7 +68,7 @@ Perf_PAPI::stop()
     if(result_vector == NULL && running && number_of_results)
     {
         result_vector = new Result_t[number_of_results];
-        PAPI_stop_counters(result_vector, available_counters);
+        PAPI_stop(Event_set, result_vector);
     }
 	else
 	{
