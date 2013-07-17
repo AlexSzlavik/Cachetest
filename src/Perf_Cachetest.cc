@@ -189,6 +189,12 @@ Perf_Cachetest::parseEvents(char *string) {
         }
     }
 
-    return events;
+	if( events->size() != 0 )
+	    return events;
+	else
+	{
+		delete events;
+		return NULL;
+	}
 }
 

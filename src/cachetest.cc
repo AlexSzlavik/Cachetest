@@ -99,10 +99,8 @@ main( int argc, char* const argv[] ) {
 
     barrier = &dummy;    //Calculate the upper bound for the sig handler to search
 
-    if(!perf->start())
-    {
-        error("Can't start counters");
-    }
+    if(Measured_events != NULL && !perf->start())
+        error("ERROR: Can't start counters");
 
     asm ("#//Loop Starts here");
     for (;;) {
@@ -130,11 +128,12 @@ main( int argc, char* const argv[] ) {
     }
 
     //Get the Perf data
-    if(!perf->stop())
-		error("ERROR: Stopping Counters failed");
-
 	std::vector<Result_t> results;
-	perf->read_results(results);
+    if( Measured_events != NULL != 0 && !perf->stop() )
+	{
+		error("ERROR: Stopping Counters failed");
+		perf->read_results(results);
+	}
 
     //Result output
     *output << (opt.dataset >> 10)

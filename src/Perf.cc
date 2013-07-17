@@ -40,5 +40,11 @@ Perf::parseEvents(char* str)
         Events->push_back(new_event);
     }
 
-    return Events;
+	if ( Events->size() != 0 )
+	    return Events;
+	else
+	{
+		delete Events;
+		return NULL;
+	}
 }
