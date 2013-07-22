@@ -70,7 +70,10 @@ Perf_Cachetest::addEvents(std::vector<Event> &event) {
 bool
 Perf_Cachetest::start() {
     if(fd_leader > 0)
+	{
+        ioctl(fd_leader,PERF_EVENT_IOC_RESET, 0 );
         ioctl(fd_leader,PERF_EVENT_IOC_ENABLE, 0 );
+	}
     else
         return false;
 	return true;
