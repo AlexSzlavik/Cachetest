@@ -1,4 +1,3 @@
-#include "options.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -15,13 +14,14 @@
 #include <fcntl.h>
 #include <fstream>
 #include <pthread.h>
-#include "Distribution.h"
-#include "Buffer.hpp"
+#include <Options.hpp>
+#include <Distribution.hpp>
+#include <Buffer.hpp>
 #include "zipf.h"
-#include "proto.h"
+#include <Prototypes.hpp>
 #include <config.h>
 
-#include "Perf.h"
+#include <Perf.hpp>
 //Defs
 
 #define INITIAL_LOOP_ITERATIONS 10000000

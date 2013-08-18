@@ -1,9 +1,9 @@
-#include <Perf.h>
+#include <Perf.hpp>
 
 #ifdef HAVE_PAPI_H
-#include "Perf_PAPI.h"
+#include "Perf_PAPI.hpp"
 #else
-#include "Perf_Cachetest.h"
+#include "Perf_Cachetest.hpp"
 #endif
 
 Perf* Perf::instance = NULL;

@@ -5,68 +5,23 @@
 #ifndef __BUFFER_H__
 #define __BUFFER_H__
 
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <cstdlib>
 #include <csignal>
 #include <cstring>
-#include <unistd.h>
-#include <iomanip>
-#include <sched.h>
-#include <sys/time.h>
-#include <vector>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <cstdio>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <sys/mman.h>
+#include <iostream>
+#include <string>
 #include <map>
-#include <math.h>
-#include <stdint.h>
+#include <iomanip>
+#include <vector>
 #include <sstream>
-
-#ifndef MAP_HUGETLB
-#define MAP_HUGETLB 0x40000 /* arch specific */
-#endif
-
-#define KPF_LOCKED		0
-#define KPF_ERROR		1
-#define KPF_REFERENCED		2
-#define KPF_UPTODATE		3
-#define KPF_DIRTY		4
-#define KPF_LRU			5
-#define KPF_ACTIVE		6
-#define KPF_SLAB		7
-#define KPF_WRITEBACK		8
-#define KPF_RECLAIM		9
-#define KPF_BUDDY		10
-
-/* 11-20: new additions in 2.6.31 */
-#define KPF_MMAP		11
-#define KPF_ANON		12
-#define KPF_SWAPCACHE		13
-#define KPF_SWAPBACKED		14
-#define KPF_COMPOUND_HEAD	15
-#define KPF_COMPOUND_TAIL	16
-#define KPF_HUGE		17
-#define KPF_UNEVICTABLE		18
-#define KPF_HWPOISON		19
-#define KPF_NOPAGE		20
-
-#define KPF_KSM			21
-
-/* kernel hacking assistances
- * WARNING: subject to change, never rely on them!
- */
-#define KPF_RESERVED		32
-#define KPF_MLOCKED		33
-#define KPF_MAPPEDTODISK	34
-#define KPF_PRIVATE		35
-#define KPF_PRIVATE_2		36
-#define KPF_OWNER_PRIVATE	37
-#define KPF_ARCH		38
-#define KPF_UNCACHED		39
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <linux/kernel-page-flags.h>
 
 /* My Customs */
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB )

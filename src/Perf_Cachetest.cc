@@ -1,7 +1,7 @@
 //Author:	Alex Szlavik
 //Perf_Cachetest.cc
 
-#include <Perf_Cachetest.h>
+#include <Perf_Cachetest.hpp>
 
 Perf_Cachetest::Perf_Cachetest() {
     fd_leader = -1;

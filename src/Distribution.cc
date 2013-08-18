@@ -1,4 +1,4 @@
-#include "Distribution.h"
+#include <Distribution.hpp>
 
 Distribution* 
 Distribution::createDistribution(Distribution::TYPE t,

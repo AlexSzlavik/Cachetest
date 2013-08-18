@@ -1,6 +1,6 @@
 #ifndef __PERF_CACHETEST_H__
 #define __PERF_CACHETEST_H__
-#include <Perf.h>
+#include <Perf.hpp>
 
 class Perf_Cachetest : public Perf
 {
