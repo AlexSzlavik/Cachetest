@@ -23,10 +23,6 @@
 #include <stdint.h>
 #include <linux/kernel-page-flags.h>
 
-/* My Customs */
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB )
-#define PROTECTION (PROT_READ | PROT_WRITE)
-
 namespace Linux_attributes
 {
 	const uint64_t PAGEMAP_PFN_MASK 		= ( 1ULL << 55 ) - 1;

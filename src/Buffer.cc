@@ -56,10 +56,7 @@ Buffer::Buffer( size_t Buffer_size, size_t Pool_size, size_t Logical_page_size, 
 																										M_Logical_page_size( Logical_page_size ),
 																										M_Page_size( getpagesize() )
 {
-	if( Contiguous )
-		M_Pool_size = Round_to_alignment( Pool_size + Buffer_size , M_Logical_page_size );
-	else
-		M_Pool_size = M_Buffer_size;	//Buffer can be much smaller if it's not contiguous
+	M_Pool_size = Round_to_alignment( Pool_size + Buffer_size , M_Logical_page_size );
 }
 
 Buffer::Error_code
@@ -107,21 +104,6 @@ Buffer::Populate_frame_to_page_map( Frame_to_page_map & Map )
 
         PFN = Dev_data & Linux_attributes::PAGEMAP_PFN_MASK;   //PFN
         Map[PFN] = M_Buffer + idx * M_Page_size;
-
-#ifdef DEBUG_CREATE
-        std::cout << "IDX: " << idx << std::endl;
-        std::cout << "PFN->VPN:\t" << std::hex << "0x" << PFN << " -> 0x" << Map[PFN] << std::endl;
-        std::cout << std::dec;
-        printf("PageMap:\t0x%016llx\n",Dev_data);
-        printf("Flags:\t\t0x%016llx\n",Dev_flags);
-	    if(Dev_flags & (1 << KPF_COMPOUND_HEAD))
-	    	printf("COMPOUND_HEAD SET\n");
-	    if(Dev_flags & (1 << KPF_COMPOUND_TAIL))
-	    	printf("COMPOUND_TAIL SET\n");
-	    if(Dev_flags & (1 << KPF_HUGE))
-	    	printf("HUGE SET\n");
-	    printf("\n");
-#endif
     }
 
     close( File_pagemap );
@@ -143,7 +125,7 @@ Buffer::Find_contiguous_range()
 	uintptr_t						Last_PFN = 0;
 	Frame_to_page_map::iterator		Map_iterator;
 
-	Required_pages = 				( Round_to_alignment( M_Buffer_size, M_Logical_page_size )  / M_Logical_page_size ) - 1;
+	Required_pages = ( Round_to_alignment( M_Buffer_size, M_Logical_page_size )  / M_Logical_page_size ) - 1;
 	M_Buffer_slabs.push_back( Tmp_slabs.begin()->second );
 
 	for( Map_iterator = Tmp_slabs.begin(); Map_iterator != Tmp_slabs.end(); Map_iterator++ )
@@ -182,7 +164,7 @@ Buffer::Initialize()
 
     memset( reinterpret_cast<void*>( M_Buffer ), 0x0 , Get_allocated_size() );
 
-	if( M_Buffer % ~( M_Page_size - 1 ) != 0 )	//Ensure that the buffer is page aligned
+	if( M_Buffer % M_Page_size != 0 )	//Ensure that the buffer is page aligned
 		M_Buffer = Round_to_alignment( M_Buffer, M_Logical_page_size );
 
 	if( M_Contiguous )
