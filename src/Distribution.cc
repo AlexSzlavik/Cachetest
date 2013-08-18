@@ -45,7 +45,7 @@ void Distribution::setup(Buffer *buffer, size_t esize, int seed, int cacheline) 
     this->element_size = esize;
     this->seed = seed;
     this->cacheline = cacheline;
-    this->num_elements = buffer->getSize()/ element_size;
+    this->num_elements = buffer->Get_size()/ element_size;
     this->num_elements_in_cacheline = cacheline / element_size;
     this->entries = 0;
 }
@@ -64,7 +64,7 @@ double Distribution::getBufferUtilization() {
 
 //Dump the contents of our buffer to fd
 void Distribution::dumpBuffer(int fd) {
-    if(write(fd,buffer->getPtr(),buffer->getActualSize()) < 0) {
+    if(write(fd,buffer->Get_buffer_pointer(),buffer->Get_allocated_size()) < 0) {
         perror("Dumping Buffer");
     }
 }
@@ -89,28 +89,27 @@ void ZipfDistribution::setParameters(double alpha, unsigned int items) {
 //Actual implementations of Distributions
 //
 void LinearDistribution::doDistribute() {
-    int datalines = buffer->getSize()/ cacheline;
-    unsigned int offset = buffer->getStartAddr() - buffer->getPtr();
-    assert(!buffer->isHuge());
+    int datalines = buffer->Get_size()/ cacheline;
+    unsigned int offset = buffer->Get_start_address() - buffer->Get_buffer_pointer();
     this->sequence.clear();
     for ( int i = 0; i < datalines; i += 1 ) {
-        *(int*)(buffer->getStartAddr() + i * cacheline) = ((i + 1) % datalines) * cacheline + offset;
+        *(int*)(buffer->Get_start_address() + i * cacheline) = ((i + 1) % datalines) * cacheline + offset;
         this->sequence.push_back((i+1)%datalines);
         entries += 1;
     }
 }
 
 void UniformDistribution::doDistribute() {
-    int bufferlines = buffer->getSize()/ cacheline;
+    int bufferlines = buffer->Get_size()/ cacheline;
     int num_line_elements = cacheline / element_size;
     int offset;
     int element = 0;
-    int previdx = buffer->getStartAddr() - buffer->getPtr();
+    int previdx = buffer->Get_start_address() - buffer->Get_buffer_pointer();
     bool done = false;
     this->sequence.clear();
     MTRand mr(seed);
 
-    if(buffer->isHuge() && buffer->getSlabs().size() > 0)
+    if(buffer->Is_large_buffer() && buffer->Get_slabs().size() > 0)
         return this->doHugeDistribution();
 
     /* New algorithm:
@@ -126,8 +125,8 @@ void UniformDistribution::doDistribute() {
         int idx = mr.randInt() % bufferlines;
         offset = 0;
         while (true) {
-            element = idx * cacheline + offset*element_size + (buffer->getStartAddr() - buffer->getPtr());
-            if(*(element_size_t*)(buffer->getPtr() + element)) {
+            element = idx * cacheline + offset*element_size + (buffer->Get_start_address() - buffer->Get_buffer_pointer());
+            if(*(element_size_t*)(buffer->Get_buffer_pointer() + element)) {
                 offset += 1;
             }else{
                 break;
@@ -136,11 +135,11 @@ void UniformDistribution::doDistribute() {
         }
         if(done) break;
         this->sequence.push_back(idx);
-        *(element_size_t*)(buffer->getPtr() + previdx) = element;
+        *(element_size_t*)(buffer->Get_buffer_pointer() + previdx) = element;
         previdx = element;
         entries += 1;
     }
-    *(int*)(buffer->getPtr() + previdx) = buffer->getStartAddr() - buffer->getPtr();
+    *(int*)(buffer->Get_buffer_pointer() + previdx) = buffer->Get_start_address() - buffer->Get_buffer_pointer();
 }
 
 //Mainly duplicate from above.
@@ -151,7 +150,7 @@ void UniformDistribution::doDistribute() {
 //but treat them as though they were contiguous. So we need to do some fancy 
 //address translation
 void UniformDistribution::doHugeDistribution() {
-    unsigned int bufferlines = buffer->getSize()/ cacheline;
+    unsigned int bufferlines = buffer->Get_size()/ cacheline;
     unsigned int num_line_elements = cacheline / element_size;
     unsigned int num_lines_on_page = ((1 << 21) / (cacheline));
     int offset;
@@ -161,21 +160,21 @@ void UniformDistribution::doHugeDistribution() {
     MTRand mr(seed);
     this->sequence.clear();
 
-    previdx = buffer->getStartAddr() - buffer->getPtr();
+    previdx = buffer->Get_start_address() - buffer->Get_buffer_pointer();
 
-    assert((buffer->getSlabs()).size() > 0);    //Ensure that the slabs have been setup
+    assert((buffer->Get_slabs()).size() > 0);    //Ensure that the slabs have been setup
     for ( int i = 0; i < num_elements; i += 1 ) {
         int idx = mr.randInt() % bufferlines;
         this->sequence.push_back(idx);
         unsigned int page = idx / num_lines_on_page; //Find the logical page idx mod (2 MB/64 b)
         unsigned int pageIDX = idx - page*num_lines_on_page; //Offset into page (line)
-        unsigned long long virtPageStart = buffer->getSlabs()[page];
-        unsigned long long virtBufferStart = (unsigned long long)buffer->getPtr();
+        unsigned long long virtPageStart = buffer->Get_slabs()[page];
+        unsigned long long virtBufferStart = (unsigned long long)buffer->Get_buffer_pointer();
 
         offset = 0;
         while (true) {
             element = (virtPageStart-virtBufferStart) + pageIDX*cacheline + offset*element_size;
-            if(*(element_size_t*)(buffer->getPtr() + element)) {
+            if(*(element_size_t*)(buffer->Get_buffer_pointer() + element)) {
                 offset += 1;
             }else{
                 break;
@@ -183,11 +182,11 @@ void UniformDistribution::doHugeDistribution() {
             if(offset == num_line_elements - 1) { done=true; break; }
         }
         if(done) break;
-        *(element_size_t*)(buffer->getPtr() + previdx) = element;
+        *(element_size_t*)(buffer->Get_buffer_pointer() + previdx) = element;
         previdx = element;
         entries += 1;
     }
-    *(int*)(buffer->getPtr() + previdx) = (buffer->getStartAddr()-buffer->getPtr());
+    *(int*)(buffer->Get_buffer_pointer() + previdx) = (buffer->Get_start_address()-buffer->Get_buffer_pointer());
 }
 
 /*
@@ -248,7 +247,7 @@ void ZipfDistribution::doDistribute() {
 void WeightedUniform::calculateCDF() {
     unsigned long long running_total = 0;
 
-    for(int i=0;i<buffer->getSize()/cacheline;i++){
+    for(int i=0;i<buffer->Get_size()/cacheline;i++){
         running_total += i;
         cdf.push_back(running_total);
     }
@@ -282,16 +281,16 @@ unsigned int WeightedUniform::getNextIDX(MTRand &mr) {
 }
 
 void WeightedUniform::doDistribute() {
-    int bufferlines = buffer->getSize()/ cacheline;
+    int bufferlines = buffer->Get_size()/ cacheline;
     int num_line_elements = cacheline / element_size;
     int offset;
     int element = 0;
-    int previdx = buffer->getStartAddr() - buffer->getPtr();
+    int previdx = buffer->Get_start_address() - buffer->Get_buffer_pointer();
     bool done = false;
     this->sequence.clear();
     MTRand mr(seed);
 
-    if(buffer->isHuge() && buffer->getSlabs().size() > 0)
+    if(buffer->Is_large_buffer() && buffer->Get_slabs().size() > 0)
         assert(false);
 
     calculateCDF();
@@ -310,8 +309,8 @@ void WeightedUniform::doDistribute() {
         assert(idx < bufferlines);
         offset = 0;
         while (true) {
-            element = idx * cacheline + offset*element_size + (buffer->getStartAddr() - buffer->getPtr());
-            if(*(element_size_t*)(buffer->getPtr() + element)) {
+            element = idx * cacheline + offset*element_size + (buffer->Get_start_address() - buffer->Get_buffer_pointer());
+            if(*(element_size_t*)(buffer->Get_buffer_pointer() + element)) {
                 offset += 1;
             }else{
                 break;
@@ -320,9 +319,9 @@ void WeightedUniform::doDistribute() {
         }
         if(done) break;
         this->sequence.push_back(idx);
-        *(element_size_t*)(buffer->getPtr() + previdx) = element;
+        *(element_size_t*)(buffer->Get_buffer_pointer() + previdx) = element;
         previdx = element;
         entries += 1;
     }
-    *(int*)(buffer->getPtr() + previdx) = buffer->getStartAddr() - buffer->getPtr();
+    *(int*)(buffer->Get_buffer_pointer() + previdx) = buffer->Get_start_address() - buffer->Get_buffer_pointer();
 }

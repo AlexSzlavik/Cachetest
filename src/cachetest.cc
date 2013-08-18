@@ -16,7 +16,7 @@
 #include <fstream>
 #include <pthread.h>
 #include "Distribution.h"
-#include "Buffer.h"
+#include "Buffer.hpp"
 #include "zipf.h"
 #include "proto.h"
 #include <config.h>
@@ -48,7 +48,7 @@ Distribution*       distr               = NULL;
 Perf*               perf                = NULL;
 std::vector<Event>* Measured_events     = NULL;
 
-Buffer              buffer;
+Buffer*				buffer;
 Result_vector_t     Results;
 std::stringstream   ss, ss1;
 Options             opt;
@@ -94,8 +94,8 @@ main( int argc, char* const argv[] ) {
     unsigned char* startAddr = NULL;
     unsigned int dummy=0;
 
-    startAddr = buffer.getPtr();  //This is new, need to get the correct version from the Buffer
-    index = (unsigned long long)buffer.getStartAddr() - (unsigned long long)buffer.getPtr();
+    startAddr = buffer->Get_buffer_pointer();  //This is new, need to get the correct version from the Buffer
+    index = (unsigned long long)buffer->Get_start_address() - (unsigned long long)buffer->Get_buffer_pointer();
 
     barrier = &dummy;    //Calculate the upper bound for the sig handler to search
 
@@ -154,7 +154,7 @@ main( int argc, char* const argv[] ) {
 		*output << " " << *it;
     *output << std::endl;
 
-    buffer.dumpFrames(ss1.str());
+    buffer->Dump_frames(ss1.str());
 
     return 0;
 }
@@ -291,17 +291,16 @@ Setup_buffer()
     //Need to be 100% sure that this is contiguous
     int buffersize = opt.dataset * opt.bufferfactor;
     if(opt.huge)
-        buffer = createLargeBuffer(buffersize,opt.cont);
-    else {
-        buffer = createBuffer(buffersize,opt.cont);
-    }
+    	buffer = new Large_buffer( buffersize, opt.cont );
+    else
+    	buffer = new Small_buffer( buffersize, opt.cont );
 
-    buffer.offsetBuffer(opt.bufferoffset);
+    buffer->Set_buffer_offset(opt.bufferoffset);
 
     //unsigned char* buffer = new unsigned char[buffersize];
     //memset( buffer, 0, buffersize );
 #ifdef DEBUG
-    std::cout << "Buffer at: " << std::hex << (element_size_t*)buffer.getPtr() << " - " << (element_size_t*)(buffer.getPtr() + buffersize) << std::endl;
+    std::cout << "Buffer at: " << std::hex << (element_size_t*)buffer->getPtr() << " - " << (element_size_t*)(buffer->getPtr() + buffersize) << std::endl;
 #endif
 
     return true;
@@ -332,9 +331,9 @@ Setup_distribution()
     // write operation in the runtime loop below
     distr = NULL;
     if ( opt.seed >= 0 ) {
-        distr = Distribution::createDistribution(Distribution::UNIFORM,&buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
+        distr = Distribution::createDistribution(Distribution::UNIFORM,buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
     }else{
-        distr = Distribution::createDistribution(Distribution::LINEAR,&buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
+        distr = Distribution::createDistribution(Distribution::LINEAR,buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
     }
     distr->distribute();
 #ifdef DEBUG_CREATE

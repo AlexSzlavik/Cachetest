@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "MersenneTwister.h"
 #include "zipf.h"
-#include "Buffer.h"
+#include "Buffer.hpp"
 #include <algorithm>
 #include <vector>
 
