@@ -11,6 +11,7 @@ struct Options
     unsigned int            dataset;            /*Size of the dataset*/
 
     int                     seed;               /*RNG Seed*/
+    double					alpha;				/*Alpha for Zipf distribution*/
     int                     cpu;                
     
     bool                    cont;               /*Contiguous memory allocation*/
@@ -28,6 +29,7 @@ struct Options
         loopfactor      = 1;
         cacheline       = 64;
         seed            = -1;
+        alpha			= -1;
         cpu             = -1;
         cont            = false;
         huge            = false;

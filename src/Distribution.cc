@@ -86,6 +86,11 @@ void ZipfDistribution::setParameters(double alpha, unsigned int items) {
     this->num_items = items;
 }
 
+void ZipfDistribution::setAlpha(const double alpha) {
+    this->alpha = alpha;
+}
+
+
 //Actual implementations of Distributions
 //
 void LinearDistribution::doDistribute() {
@@ -197,39 +202,33 @@ void UniformDistribution::doHugeDistribution() {
  * linked list of access pattern. 
  */
 void ZipfDistribution::doDistribute() {
+    int bufferlines = buffer->Get_size()/ cacheline;
+    int num_line_elements = cacheline / element_size;
     int offset;
+    int element = 0;
+    int elementZipf = 0;
+    int previdx = buffer->Get_start_address() - buffer->Get_buffer_pointer();
+    bool done = false;
+    this->sequence.clear();
     MTRand mr(seed);
 
-    if(init_zipf(this->seed) < 0){
-        std::cerr << "Seeding Zipf failed" << std::endl;
-        exit(1);
-    }
-
-    //Randomize the slots
-    //Doing Sattolo's Alrgorithm for an in-place shuffle of an array
-    //This is the Fisher-Yates shuffler
-    int *slots = new int[num_elements]; //This is the rank array
-    int i=0;
-    for(i=0;i<num_elements;i++) slots[i]=0;
-    i = num_elements;
-    while (i > 0) {
-        i -= 1;
-        int j = mr.randInt(i-1);
-        int tmp = slots[j];
-        slots[j]=slots[i];
-        slots[i]=tmp;
-    }
-
-    //The element at idx in rank array is the bufferslot of rank idx
-    //
-    //Now insert the zipf pattern
-
-    /*for ( int i = 0; i < num_elements; i += 1 ) {
-        int idx = mr.randInt() % bufferlines;
+    /* New algorithm:
+	 * Init the access array, such that we randomly sample a new place to go to,
+	 * but each entry has cacheline / sizeof(int) entries. This is sort of 
+	 * analogous to buckets in hashing. When the front entry is full, find 
+	 * one empty one in the next 15 entries. If all of them are full, 
+	 * remember that this occured and draw a new number element.
+	 * Then the actual memory traversal should simply follow the pointers again
+	 * and all is swell
+	 */
+    for ( int i = 0; i < num_elements; i += 1 ) {
+        int idxZipf = mr.zipfInt(alpha, bufferlines);
+        int idxUniform = mr.randInt() % bufferlines;
+        
         offset = 0;
         while (true) {
-            element = idx * cacheline + offset*element_size;
-            if(*(element_size_t*)(buffer + element)) {
+            element = idxUniform * cacheline + offset*element_size + (buffer->Get_start_address() - buffer->Get_buffer_pointer());
+            if(*(element_size_t*)(buffer->Get_buffer_pointer() + element)) {
                 offset += 1;
             }else{
                 break;
@@ -237,11 +236,16 @@ void ZipfDistribution::doDistribute() {
             if(offset == num_line_elements - 1) { done=true; break; }
         }
         if(done) break;
-        *(element_size_t*)(buffer + previdx) = element;
+        this->sequence.push_back(idxUniform);
+        //elementZipf = element + sizeof(element_size_t);
+        //printf("Element:%d \t ElementZipf:%d\n",element,elementZipf);
+        //*((int *)element) = idxZipf;
+        *(element_size_t*)(buffer->Get_buffer_pointer() + previdx) = element;
+        *(element_size_t*)(buffer->Get_buffer_pointer() + previdx + sizeof(element_size_t)) = idxZipf;
         previdx = element;
         entries += 1;
     }
-    *(int*)(buffer + previdx) = 0;*/
+    *(int*)(buffer->Get_buffer_pointer() + previdx) = buffer->Get_start_address() - buffer->Get_buffer_pointer();
 }
 
 void WeightedUniform::calculateCDF() {

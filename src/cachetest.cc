@@ -17,7 +17,6 @@
 #include <Options.hpp>
 #include <Distribution.hpp>
 #include <Buffer.hpp>
-#include "zipf.h"
 #include <Prototypes.hpp>
 #include <config.h>
 
@@ -37,7 +36,7 @@ void * WRITEBACK_VAR;
 #define START_CODE 4711u
 #define EXIT_CODE 4710u
 
-#define OPT_ARG_STRING "shab:d:f:l:r:c:e:o:Aw"
+#define OPT_ARG_STRING "shab:d:f:l:r:z:c:e:o:Aw"
 
 //Global Variables
 unsigned int*       barrier             = NULL;
@@ -52,6 +51,7 @@ Buffer*				buffer;
 Result_vector_t     Results;
 std::stringstream   ss, ss1;
 Options             opt;
+bool				isZipf = false;
 
 //We should add a sanity check to ensure that the dataset is a multiple of 
 //the element size, otherwise we might have half sized elements, which could force
@@ -65,7 +65,6 @@ void error(std::string code)
 
 int 
 main( int argc, char* const argv[] ) {
-
 	Initialize();
 
     Parse_options(argc, argv, opt);
@@ -104,27 +103,64 @@ main( int argc, char* const argv[] ) {
 
     asm ("#//Loop Starts here");
     for (;;) {
-        element_size_t next = *(element_size_t*)(startAddr + index);
-        //for ( int j = 0; j < loopfactor; j += 1 ) dummy *= next;
-#ifdef WRITEBACK
-        *(element_size_t*)(startAddr + index + sizeof(int)) = dummy;
-#endif
-#ifdef DEBUG_RUN
-        std::cout << index << ' ' << next << std::endl;
-        std::cout << std::hex << (element_size_t*)(startAddr+index) << std::dec << std::endl;
-#endif
-        index = next;
-        accesscount += 1;
 
-        register unsigned int tester;
+    	if(isZipf)
+    	{
+    		element_size_t next = *(element_size_t*)(startAddr + index);
+    		element_size_t zipf = *(element_size_t*)(startAddr + index + sizeof(element_size_t));
 
-#if defined(__powerpc__)
-        asm volatile ("mr %0,%1" : "=r" (tester) : "r" (stop) );
-#else
-        asm volatile ("movl %1, %0" : "=r" (tester) : "r" (stop) );    //This tricks the Compiler
-#endif
-        asm("#Exit");
+    		volatile element_size_t firstZipf = *(element_size_t*)(startAddr);
+
+    		for (int i=0; i <= zipf; i++) {
+    			__asm__ __volatile__ ("nop");
+    			firstZipf = *(element_size_t*)(startAddr+firstZipf);
+    			__asm__ __volatile__ ("nop");
+    		}
+
+	#ifdef WRITEBACK
+			*(element_size_t*)(startAddr + index + sizeof(int)) = dummy;
+	#endif
+	#ifdef DEBUG_RUN
+			std::cout << index << ' ' << next << std::endl;
+			std::cout << std::hex << (element_size_t*)(startAddr+index) << std::dec << std::endl;
+	#endif
+			index = next;
+			accesscount += 1;
+
+			register unsigned int tester;
+
+	#if defined(__powerpc__)
+			asm volatile ("mr %0,%1" : "=r" (tester) : "r" (stop) );
+	#else
+			asm volatile ("movl %1, %0" : "=r" (tester) : "r" (stop) );    //This tricks the Compiler
+	#endif
+			asm("#Exit");
         if ( tester == EXIT_CODE) break;
+    	} 
+	else
+    	{
+			element_size_t next = *(element_size_t*)(startAddr + index);
+			//for ( int j = 0; j < loopfactor; j += 1 ) dummy *= next;
+	#ifdef WRITEBACK
+			*(element_size_t*)(startAddr + index + sizeof(int)) = dummy;
+	#endif
+	#ifdef DEBUG_RUN
+			std::cout << index << ' ' << next << std::endl;
+			std::cout << std::hex << (element_size_t*)(startAddr+index) << std::dec << std::endl;
+	#endif
+			index = next;
+			accesscount += 1;
+
+			register unsigned int tester;
+
+	#if defined(__powerpc__)
+			asm volatile ("mr %0,%1" : "=r" (tester) : "r" (stop) );
+	#else
+			asm volatile ("movl %1, %0" : "=r" (tester) : "r" (stop) );    //This tricks the Compiler
+	#endif
+			asm("#Exit");
+        if ( tester == EXIT_CODE) break;
+    	}
     }
 
     //Get the Perf data
@@ -184,6 +220,7 @@ static void usage( const char* program ) {
     std::cerr << "-f loop factor (default: 1)" << std::endl;
     std::cerr << "-l cache line size in bytes (default: 64)" << std::endl;
     std::cerr << "-r random seed (default: sequential access)" << std::endl;
+    std::cerr << "-z zipf distribution alpha value" << std::endl;
     std::cerr << "-c CPU ID to pin the experiment to (default: 1, off main)" << std::endl;
     std::cerr << "-e Event list (rx0000yyxx or xx,uyy format)" << std::endl;
     std::cerr << "-h Use Huge pages (default: no) " << std::endl;
@@ -224,6 +261,7 @@ Parse_options( int argc, char * const *argv, Options &opt)
             case 'f': opt.loopfactor = atoi( optarg ); break;
             case 'l': opt.cacheline = atoi( optarg ); break;
             case 'r': opt.seed = atoi( optarg ); break;
+            case 'z': opt.alpha = atof( optarg ); break;
             case 'c': opt.cpu = atoi( optarg ); break;
             case 'e': Measured_events = perf->parseEvents( optarg ) ; break;
             case 'a': opt.cont = 1; break;
@@ -330,10 +368,14 @@ Setup_distribution()
     // next index, while the next (sizeof int) bytes can be used for a dummy
     // write operation in the runtime loop below
     distr = NULL;
-    if ( opt.seed >= 0 ) {
-        distr = Distribution::createDistribution(Distribution::UNIFORM,buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
-    }else{
-        distr = Distribution::createDistribution(Distribution::LINEAR,buffer,opt.cacheline,sizeof(element_size_t),opt.seed);
+    if ( opt.alpha >= 0 ) {
+    	distr = Distribution::createDistribution(Distribution::ZIPF,buffer,opt.cacheline,sizeof(element_size_t)*2,opt.seed);
+        ((ZipfDistribution*)distr)->setAlpha(opt.alpha);
+        isZipf = true;
+    } else if ( opt.seed >= 0 ) {
+        distr = Distribution::createDistribution(Distribution::UNIFORM,buffer,opt.cacheline,sizeof(element_size_t)*2,opt.seed);
+    } else{
+        distr = Distribution::createDistribution(Distribution::LINEAR,buffer,opt.cacheline,sizeof(element_size_t)*2,opt.seed);
     }
     distr->distribute();
 #ifdef DEBUG_CREATE

@@ -66,6 +66,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cmath>
+#include "zipf.h"
 
 class MTRand {
 // Data
@@ -96,6 +97,7 @@ public:
 	// Access to 32-bit random numbers
 	uint32 randInt();                     // integer in [0,2^32-1]
 	uint32 randInt( const uint32 n );     // integer in [0,n] for n < 2^32
+	uint32 zipfInt( const double alpha, uint32 n ); // integer in [0,n] for n < 2^32
 	double rand();                        // real number in [0,1]
 	double rand( const double n );        // real number in [0,n]
 	double randExc();                     // real number in [0,1)
@@ -314,6 +316,54 @@ inline MTRand::uint32 MTRand::randInt( const uint32 n )
 		i = randInt() & used;  // toss unused bits to shorten search
 	while( i > n );
 	return i;
+}
+
+
+/* Modified from code written by Kenneth J. Christensen
+ * available at http://www.csee.usf.edu/~christen/tools/genzipf.c
+ */
+inline MTRand::uint32 MTRand::zipfInt( const double alpha, uint32 n )
+{
+  n++;
+  static double c = -1;         // Normalization constant
+  double z;                     // Uniform random number (0 < z < 1)
+  double sum_prob;              // Sum of probabilities
+  double zipf_value;            // Computed exponential value to be returned
+  int    i;                     // Loop counter
+
+  // Compute normalization constant on first call only
+  if (c == -1)
+  {
+    for (i=1; i<=n; i++)
+      c = c + (1.0 / pow((double) i, alpha));
+    c = 1.0 / c;
+  }
+
+  // Pull a uniform random number (0 < z < 1)
+  do
+  {
+  	// z = rand_val(0);
+  	// Using C rand() function instead of rand_val.
+    z = rand();
+  }
+  while ((z == 0) || (z == 1));
+
+  // Map z to the value
+  sum_prob = 0;
+  for (i=1; i<=n; i++)
+  {
+    sum_prob = sum_prob + c / pow((double) i, alpha);
+    if (sum_prob >= z)
+    {
+      zipf_value = i;
+      break;
+    }
+  }
+
+  // Assert that zipf_value is between 1 and N
+  assert((zipf_value >=1) && (zipf_value <= n));
+
+  return(zipf_value - 1.0);
 }
 
 inline double MTRand::rand()
