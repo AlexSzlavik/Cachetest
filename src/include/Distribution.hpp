@@ -64,6 +64,7 @@ class ZipfDistribution: public Distribution {
     public:
         ZipfDistribution() { alpha = 0; num_items = 0;}
         void setParameters(double alpha, unsigned int num_items);
+        void setAlpha(const double alpha);
         virtual void doDistribute();
 };
 
